@@ -1,6 +1,6 @@
 function [blackHole, bestSolution, bestCost, allBestCost] = BH_Func(blackHole)
-    %% Initialization
-    % Crear población inicial
+
+    %% Inicialización: crear población inicial
     locationOfStars = repmat(blackHole.varMin, blackHole.numOfStars, 1) + ...
                       repmat(blackHole.varMax - blackHole.varMin, blackHole.numOfStars, 1) ...
                       .* rand(blackHole.numOfStars, blackHole.nVar);
@@ -79,7 +79,7 @@ function [blackHole, bestSolution, bestCost, allBestCost] = BH_Func(blackHole)
     title('Convergencia del Costo');
     xlabel('Iteración'); ylabel('Mejor Costo'); grid on;
 
-    %% Visualización final para nVar == 2 (opcional)
+    %% Visualización final para nVar == 2
     if blackHole.nVar == 2
         figure;
         [X,Y] = meshgrid(linspace(blackHole.varMin(1),blackHole.varMax(1),100), ...

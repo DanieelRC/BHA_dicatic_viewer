@@ -3,14 +3,13 @@ close all;
 
 %% Problem Definition
 rng(1);
-%numberOfVariable = 10;          % Number of input variables
-%lowerBound = -10*ones(1,10);          % Lower Bound of input variables
-%higherBound = 10*ones(1,10);         % Higher Bound of input variables
+%numberOfVariable = 10;             % Number of input variables
+%lowerBound = -10*ones(1,10);       % Lower Bound of input variables
+%higherBound = 10*ones(1,10);       % Higher Bound of input variables
 
 numberOfVariable = 2;
 lowerBound = -5 * ones(1, 2);
 higherBound = 5 * ones(1, 2);
-
 
 %% Parameter of BH
 numberOfStars = 60; %Number Of Stars
