@@ -1,126 +1,96 @@
-function [blackHole, bestSolution, blackHoleCost, allBestCost] = BH_Func(blackHole)
+function [blackHole, bestSolution, bestCost, allBestCost] = BH_Func(blackHole)
+    %% Initialization
+    % Crear población inicial
+    locationOfStars = repmat(blackHole.varMin, blackHole.numOfStars, 1) + ...
+                      repmat(blackHole.varMax - blackHole.varMin, blackHole.numOfStars, 1) ...
+                      .* rand(blackHole.numOfStars, blackHole.nVar);
 
-%% Initialization
-locationOfStars = repmat(blackHole.varMin ,blackHole.numOfStars,1) + ...
-    repmat(blackHole.varMax - blackHole.varMin ,blackHole.numOfStars,1) .* ...
-    rand(blackHole.numOfStars,blackHole.nVar);
+    allBestCost = zeros(blackHole.maxIter,1);
+    enableVisualization = (blackHole.nVar == 2);
 
-allBestCost = zeros(blackHole.maxIter,1);
+    % Parámetros de animación GIF
+    saveGif     = true;
+    gifFilename = 'BH_animation.gif';
 
-enableVisualization = (blackHole.nVar >= 2);
-
-% Configuración para guardar GIF
-saveGif = true;
-gifFilename = 'BH_animation.gif';
-
-%% Main loop
-for iter = 1:blackHole.maxIter
+    %% Evaluar población inicial y guardar mejor global
     starsCost = ObjectiveFunc(locationOfStars);
-    [blackHoleCost, BH_ind] = max(starsCost);
+    [currentBest, BH_ind] = max(starsCost);
+    bestCost     = currentBest;
+    bestSolution = locationOfStars(BH_ind, :);
+    allBestCost(1) = bestCost;
 
-    locationOfStars = locationOfStars + ...
-        (repmat(locationOfStars(BH_ind), blackHole.numOfStars, blackHole.nVar) - locationOfStars) ...
-        .* rand(blackHole.numOfStars, blackHole.nVar);
+    %% Main loop
+    for iter = 2 : blackHole.maxIter
+        % 1) Mover todas las estrellas hacia el agujero negro actual
+        locationOfStars = locationOfStars + ...
+            (repmat(locationOfStars(BH_ind, :), blackHole.numOfStars, 1) - locationOfStars) ...
+            .* rand(blackHole.numOfStars, blackHole.nVar);
 
-    starsCost = ObjectiveFunc(locationOfStars);
+        % 2) Evaluar de nuevo
+        starsCost = ObjectiveFunc(locationOfStars);
+        [currentBest, BH_ind] = max(starsCost);
 
-    if blackHoleCost < max(starsCost)
-        [blackHoleCost, BH_ind] = max(starsCost);
-    end
+        % 3) Actualizar mejor global si encontramos algo mejor
+        if currentBest > bestCost
+            bestCost     = currentBest;
+            bestSolution = locationOfStars(BH_ind, :);
+        end
+        allBestCost(iter) = bestCost;
 
-    allBestCost(iter) = blackHoleCost;
-
-    %% Visualización animada por iteración
-    if enableVisualization
-        figure(100); clf;
-        if blackHole.nVar == 2
+        %% Visualización (solo nVar == 2)
+        if enableVisualization
+            figure(100); clf;
             scatter(locationOfStars(:,1), locationOfStars(:,2), 36, 'b', 'filled'); hold on;
-            scatter(locationOfStars(BH_ind,1), locationOfStars(BH_ind,2), 100, 'r', 'filled');
+            scatter(bestSolution(1),      bestSolution(2),      100, 'r','filled');
             xlabel('X'); ylabel('Y');
-            title(['Iteración ', num2str(iter), ' - Convergencia']);
-            legend('Estrellas', 'Agujero Negro');
+            title(sprintf('Iteración %d', iter));
+            legend('Estrellas','Black Hole','Location','northeast');
             axis([blackHole.varMin(1), blackHole.varMax(1), ...
                   blackHole.varMin(2), blackHole.varMax(2)]);
-        elseif blackHole.nVar >= 3
-            scatter3(locationOfStars(:,1), locationOfStars(:,2), locationOfStars(:,3), 36, 'b', 'filled'); hold on;
-            scatter3(locationOfStars(BH_ind,1), locationOfStars(BH_ind,2), locationOfStars(BH_ind,3), 100, 'r', 'filled');
-            xlabel('X'); ylabel('Y'); zlabel('Z');
-            title(['Iteración ', num2str(iter), ' - Convergencia 3D']);
-            legend('Estrellas', 'Agujero Negro');
-            axis([blackHole.varMin(1), blackHole.varMax(1), ...
-                  blackHole.varMin(2), blackHole.varMax(2), ...
-                  blackHole.varMin(3), blackHole.varMax(3)]);
-            view(3);
-        end
-        grid on;
-        drawnow;
-        pause(0.001);
+            grid on; drawnow; pause(0.001);
 
-        % Guardar frame en GIF
-        if saveGif
-            frame = getframe(gcf);
-            img = frame2im(frame);
-            [A,map] = rgb2ind(img,256);
-            if iter == 1
-                imwrite(A,map,gifFilename,'gif','LoopCount',Inf,'DelayTime',1);
-            else
-                imwrite(A,map,gifFilename,'gif','WriteMode','append','DelayTime',1);
+            % Guardar frame en GIF
+            if saveGif
+                frame = getframe(gcf);
+                img   = frame2im(frame);
+                [A,map] = rgb2ind(img,256);
+                if iter == 2
+                    imwrite(A,map,gifFilename,'gif','LoopCount',Inf,'DelayTime',1);
+                else
+                    imwrite(A,map,gifFilename,'gif','WriteMode','append','DelayTime',1);
+                end
             end
         end
-    end
 
-    %% Horizonte de eventos
-    if iter < blackHole.maxIter
-        R = blackHoleCost / sum(starsCost);
-        distances = sqrt(sum((locationOfStars - repmat(locationOfStars(BH_ind), blackHole.numOfStars, 1)).^2, 2))';
-        crosserStarsInd = find(distances < R);
-        for i = 1:length(crosserStarsInd)
-            locationOfStars(crosserStarsInd(i), :) = ...
-                blackHole.varMin + (blackHole.varMax - blackHole.varMin) .* rand(1, blackHole.nVar);
+        %% Horizonte de eventos
+        R = bestCost / sum(starsCost);
+        distances = sqrt(sum((locationOfStars - locationOfStars(BH_ind,:)).^2, 2));
+        % Excluir el índice BH_ind
+        idx = find(distances < R & (1:blackHole.numOfStars)' ~= BH_ind);
+        for i = idx'
+            locationOfStars(i, :) = blackHole.varMin + ...
+                (blackHole.varMax - blackHole.varMin) .* rand(1, blackHole.nVar);
         end
     end
-end
 
-bestSolution = locationOfStars(BH_ind,:);
-disp(['BH_index is ', num2str(BH_ind)]);
-
-%% Gráfica de convergencia
-figure;
-semilogx(1:blackHole.maxIter, allBestCost, 'LineWidth', 2);
-title('Convergencia del Costo');
-xlabel('Iteración'); ylabel('Mejor Costo'); grid on;
-
-%% Visualización final de la función y mejor solución
-if blackHole.nVar == 2
+    %% Convergencia
     figure;
-    [X, Y] = meshgrid(linspace(blackHole.varMin(1), blackHole.varMax(1), 100), ...
-                      linspace(blackHole.varMin(2), blackHole.varMax(2), 100));
-    V = [X(:), Y(:)];
-    Z = ObjectiveFunc(V);
-    Z = reshape(Z, size(X));
-    surf(X, Y, Z, 'EdgeColor', 'none'); hold on;
-    plot3(bestSolution(1), bestSolution(2), ObjectiveFunc(bestSolution), ...
-        'ro', 'MarkerSize', 10, 'MarkerFaceColor', 'r');
-    title('Función Objetivo con Mejor Solución');
-    xlabel('X'); ylabel('Y'); zlabel('Valor');
-    view(3); grid on;
-    saveas(gcf, 'surface_final_2D.png');
-elseif blackHole.nVar == 3
-    figure;
-    fixed_z = bestSolution(3);  % corte en z óptimo
-    [X, Y] = meshgrid(linspace(blackHole.varMin(1), blackHole.varMax(1), 100), ...
-                      linspace(blackHole.varMin(2), blackHole.varMax(2), 100));
-    Zplane = fixed_z * ones(size(X));
-    V = [X(:), Y(:), Zplane(:)];
-    Fval = ObjectiveFunc(V);
-    Fval = reshape(Fval, size(X));
-    surf(X, Y, Fval, 'EdgeColor', 'none'); hold on;
-    plot3(bestSolution(1), bestSolution(2), ObjectiveFunc(bestSolution), ...
-        'ro', 'MarkerSize', 10, 'MarkerFaceColor', 'r');
-    title(['Corte de f(x,y,z) en z = ', num2str(fixed_z)]);
-    xlabel('X'); ylabel('Y'); zlabel('Valor');
-    view(3); grid on;
-    saveas(gcf, 'surface_final_3D.png');
-end
+    semilogx(1:blackHole.maxIter, allBestCost, 'LineWidth', 2);
+    title('Convergencia del Costo');
+    xlabel('Iteración'); ylabel('Mejor Costo'); grid on;
 
+    %% Visualización final para nVar == 2 (opcional)
+    if blackHole.nVar == 2
+        figure;
+        [X,Y] = meshgrid(linspace(blackHole.varMin(1),blackHole.varMax(1),100), ...
+                        linspace(blackHole.varMin(2),blackHole.varMax(2),100));
+        Z = ObjectiveFunc([X(:),Y(:)]);
+        Z = reshape(Z, size(X));
+        surf(X,Y,Z,'EdgeColor','none'); hold on;
+        plot3(bestSolution(1), bestSolution(2), bestCost, ...
+              'ro','MarkerSize',10,'MarkerFaceColor','r');
+        title('Función Objetivo y Mejor Solución');
+        xlabel('X'); ylabel('Y'); zlabel('Valor'); view(3); grid on;
+        saveas(gcf, 'surface_final_2D.png');
+    end
 end

@@ -1,12 +1,12 @@
 function Z = ObjectiveFunc2D(V)
     % Función para n variables
 
-    %Z = -sum(V.^2, 2);
+    Z = -sum(V.^2, 2);
 
-    x = V(:,1);
-    y = V(:,2);
+    %x = V(:,1);
+    %y = V(:,2);
 
-    z0 = 2.5;  
+    %z0 = 2.5;  
 
     % 1) Función Esférica
     % Z = -(x.^2 + y.^2 + z0^2);
